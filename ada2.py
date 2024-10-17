@@ -1,49 +1,84 @@
+from collections import deque
+
+class Cliente:
+    def __init__(self, nombre, servicio, es_prime=False):
+        self.nombre = nombre
+        self.servicio = servicio
+        self.es_prime = es_prime
+
+    def __repr__(self):
+        return f"{self.nombre} (Prime)" if self.es_prime else self.nombre
+
 class Cola:
     def __init__(self):
-        self.items = []
-    
-    def encolar(self, item):
-        self.items.append(item)  
+        self.normales = deque()
+        self.prime = deque()
+
+    def encolar(self, cliente):
+        (self.prime if cliente.es_prime else self.normales).append(cliente)
+
     def desencolar(self):
-        if not self.esta_vacia():
-            return self.items.pop(0) 
-        return None
-    
-    def esta_vacia(self):
-        return len(self.items) == 0
+        return self.prime.popleft() if self.prime else self.normales.popleft() if self.normales else None
 
-class SistemaColas:
+    def ver_colas(self):
+        return list(self.prime), list(self.normales)
+
+    def vacia(self):
+        return not self.prime and not self.normales
+
+class SistemaAtencion:
     def __init__(self):
-        self.servicios = {} 
-    def llegada_cliente(self, numero_servicio):
-        if numero_servicio not in self.servicios:
-            self.servicios[numero_servicio] = Cola()  
-        numero_atencion = len(self.servicios[numero_servicio].items) + 1
-        self.servicios[numero_servicio].encolar(numero_atencion)
-        print(f"Cliente {numero_atencion} en el servicio {numero_servicio}")
+        self.servicios = {
+            1: "Consulta General",
+            2: "Reclamaciones",
+            3: "Nuevas Pólizas",
+            4: "Renovaciones",
+            5: "Asesoría Financiera"
+        }
+        self.colas = {s: Cola() for s in self.servicios}
 
-    def atender_cliente(self, numero_servicio):
-        if numero_servicio in self.servicios and not self.servicios[numero_servicio].esta_vacia():
-            cliente_atendido = self.servicios[numero_servicio].desencolar()
-            print(f"Atendiendo al cliente {cliente_atendido} del servicio {numero_servicio}")
+    def agregar_cliente(self, nombre, servicio, es_prime=False):
+        if servicio in self.colas:
+            cliente = Cliente(nombre, servicio, es_prime)
+            self.colas[servicio].encolar(cliente)
+            self.mostrar_colas()
         else:
-            print(f"No hay clientes en la cola del servicio {numero_servicio}")
+            print("Servicio inválido.")
 
+    def atender_cliente(self, servicio):
+        if servicio in self.colas:
+            cliente = self.colas[servicio].desencolar()
+            if cliente:
+                print(f"Atendiendo a: {cliente}")
+            else:
+                print(f"No hay clientes en la cola de {self.servicios[servicio]}.")
+            self.mostrar_colas()
 
-sistema = SistemaColas()
+    def mostrar_colas(self):
+        for s, cola in self.colas.items():
+            prime, normales = cola.ver_colas()
+            print(f"Cola {s} - {self.servicios[s]}:\n   Prime: {prime}\n   Normal: {normales}")
+        print()
 
-while True:
-    entrada = input("Ingrese 'C' +  el número de servicio para llegada o 'A' + el número para atender (o 'Salir' para terminar): ").upper().strip()
-    
-    if entrada.startswith('C'):
-        numero_servicio = int(entrada[1:])
-        sistema.llegada_cliente(numero_servicio)
-    
-    elif entrada.startswith('A'):
-        numero_servicio = int(entrada[1:])
-        sistema.atender_cliente(numero_servicio)
-    
-    elif entrada == 'Salir':
-        break
-    else:
-        print("Entrada invalida")
+    def mostrar_servicios(self):
+        print("\n".join([f"{k}: {v}" for k, v in self.servicios.items()]))
+
+def main():
+    sistema = SistemaAtencion()
+
+    while True:
+        sistema.mostrar_servicios()
+        entrada = input("Ingrese 'C nombre servicio [P]' para agregar o 'A servicio' para atender ('salir' para terminar): ").strip().split()
+        if entrada[0].lower() == 'salir':
+            break
+        if entrada[0].upper() == 'C' and len(entrada) >= 3:
+            nombre, servicio = entrada[1], int(entrada[2])
+            es_prime = len(entrada) == 4 and entrada[3].upper() == 'P'
+            sistema.agregar_cliente(nombre, servicio, es_prime)
+        elif entrada[0].upper() == 'A' and len(entrada) == 2:
+            sistema.atender_cliente(int(entrada[1]))
+        else:
+            print("Entrada no válida.")
+
+if __name__ == "__main__":
+    main()
